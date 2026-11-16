@@ -22,11 +22,11 @@ const hebEarly = path.join(dir, 'early.mka');
 
 test.before(() => {
   run(['-f', 'lavfi', '-i', `testsrc2=s=640x360:r=24000/1001:d=${DUR}`, '-i', bedFile, '-f', 'lavfi', '-i', speech(300, 1.7),
-    '-filter_complex', '[1][2]amix=inputs=2:normalize=0[a]', '-map', '0:v', '-map', '[a]', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', eng]);
+    '-filter_complex', '[1][2]amix=inputs=2:normalize=0[a]', '-map', '0:v', '-map', '[a]', '-c:v', 'mpeg4', '-q:v', '8', '-c:a', 'aac', '-shortest', eng]);
   // גרסה מדובבת: אותו רקע, דיבור אחר, מואץ ל-25fps (פי 1.0427) ומתחילה 3.25 שניות מאוחר יותר
   run(['-f', 'lavfi', '-i', `testsrc=s=320x240:r=25:d=${DUR}`, '-i', bedFile, '-f', 'lavfi', '-i', speech(520, 2.3),
     '-filter_complex', `[1][2]amix=inputs=2:normalize=0,adelay=delays=${Math.round(3250 * 25 / 23.976)}:all=1,atempo=${25 / 23.976}[a]`, '-map', '0:v', '-map', '[a]',
-    '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-t', String(DUR), heb]);
+    '-c:v', 'mpeg4', '-q:v', '8', '-c:a', 'aac', '-t', String(DUR), heb]);
   // גרסה עם סצנה חסרה: 4 שניות (בזמן האנגלית 60–64) הוסרו
   run(['-i', bedFile, '-f', 'lavfi', '-i', speech(520, 2.3),
     '-filter_complex', '[0][1]amix=inputs=2:normalize=0,asplit[x][y];[x]atrim=0:60,asetpts=PTS-STARTPTS[p];[y]atrim=64,asetpts=PTS-STARTPTS[q];[p][q]concat=n=2:v=0:a=1,adelay=delays=1500:all=1[a]',
