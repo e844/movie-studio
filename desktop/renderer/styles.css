@@ -159,6 +159,15 @@ select { background: var(--surface-2); color: var(--on); border: 1px solid var(-
 #dub-result { margin-bottom: 20px; }
 #dub-title.warn { color: var(--end); }
 
+.drop-actions { display: flex; gap: 10px; justify-content: center; margin: 14px 0 6px; flex-wrap: wrap; }
+.dropzone { cursor: default; }
+.file-main { min-width: 0; }
+.files-card { padding: 10px 14px; }
+.files-card p { margin: 6px 2px 0; }
+.files-head { display: flex; gap: 8px; align-items: center; }
+.files-head select { flex: 1; min-width: 0; }
+.save-row { display: flex; gap: 10px; }
+.save-row .btn { flex: 1; justify-content: center; padding-inline: 12px; }
 .footer { text-align: center; color: var(--muted); font-size: 12.5px; padding: 6px 0 10px; }
 @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
 

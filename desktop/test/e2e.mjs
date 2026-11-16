@@ -25,11 +25,16 @@ const srt = `1\r\n00:00:01,000 --> 00:00:01,500\r\nאבא ?\r\n\r\n2\r\n00:00:02
 const enc = new Map([...'אבגדהוזחטיךכלםמןנסעףפץצקרשת'].map((c, i) => [c, 0xe0 + i]));
 const subsFile = path.join(work, 'Movie.heb.srt');
 fs.writeFileSync(subsFile, Buffer.from([...srt].map((c) => enc.get(c) ?? c.charCodeAt(0))));
+// עונה: עוד שני פרקים (UTF-8)
+const ep2 = path.join(work, 'Show.S01E02.srt');
+const ep10 = path.join(work, 'Show.S01E10.srt');
+fs.writeFileSync(ep2, '1\n00:00:01,000 --> 00:00:01,300\nשלום\n\n2\n00:00:01,400 --> 00:00:02,000\nלהתראות\n');
+fs.writeFileSync(ep10, '1\n00:00:05,000 --> 00:00:05,500\nפרק עשר\n');
 const { english, dubbed } = F.movies(FF, work, 90);
 
 const app = await electron.launch({
   args: ['--no-sandbox', root],
-  env: { ...process.env, MS_USER_DATA: path.join(work, 'data'), MS_TEST_SUBS: subsFile, MS_TEST_VIDEO: english, MS_TEST_DUBBED: dubbed, MS_TEST_SAVE_DIR: saveDir },
+  env: { ...process.env, MS_USER_DATA: path.join(work, 'data'), MS_TEST_SUBS: [ep10, subsFile, ep2].join(path.delimiter), MS_TEST_VIDEO: english, MS_TEST_DUBBED: dubbed, MS_TEST_SAVE_DIR: saveDir },
 });
 const win = await app.firstWindow();
 await win.setViewportSize({ width: 1320, height: 860 });
@@ -39,9 +44,11 @@ await step('Hebrew UI, credit, open old-encoding Hebrew subtitles', async () => 
   assert.equal(await win.getAttribute('html', 'dir'), 'rtl');
   assert.match(await win.textContent('.credit'), /king400/);
   await shot('1-start');
-  await win.click('#subs-empty');
+  await win.click('#subs-pick-files');
   await win.waitForSelector('#subs-editor:not([hidden])');
-  assert.match(await win.textContent('#subs-meta'), /5 כתוביות · SRT · קידוד Windows-1255/);
+  // 3 קבצים, ממוינים: Movie, Show E02, Show E10
+  assert.equal(await win.locator('#file-select option').count(), 3);
+  assert.match(await win.textContent('#subs-meta'), /קובץ 1 מתוך 3 · 5 כתוביות · SRT · קידוד Windows-1255/);
   assert.match(await win.textContent('.cue >> nth=1'), /מה קרה , למה אתה צועק \?/);
 });
 
@@ -93,6 +100,21 @@ await step('save → UTF-8 SRT, no overlaps, short lines longer', async () => {
   assert.ok(cues[0].end - cues[0].start > 500);
   assert.ok(cues[4].end - cues[4].start >= 1500);
   await shot('4-subs-saved');
+});
+
+await step('several files: switch between them, save all to one folder', async () => {
+  await win.click('#file-next');
+  assert.equal(await win.textContent('#subs-name'), 'Show.S01E02.srt');
+  await win.selectOption('#file-select', '2');
+  assert.equal(await win.textContent('#subs-name'), 'Show.S01E10.srt');
+  await shot('4b-many-files');
+  await win.click('#subs-save-all');
+  await win.waitForFunction(() => /נשמרו 3 קבצים/.test(document.getElementById('snack-text').textContent));
+  for (const n of ['Movie.heb.מתוזמן.srt', 'Show.S01E02.מתוזמן.srt', 'Show.S01E10.מתוזמן.srt']) assert.ok(fs.existsSync(path.join(saveDir, n)), n);
+  const c = S.parse(fs.readFileSync(path.join(saveDir, 'Show.S01E02.מתוזמן.srt'), 'utf8')).cues;
+  assert.ok(c[0].end <= c[1].start, 'no overlap');
+  assert.equal(c[1].end - c[1].start >= 1500, true);
+  await win.selectOption('#file-select', '0');
 });
 
 await step('dubbing: load English + dubbed, analyze → PAL speed and +3.25 s', async () => {

@@ -24,21 +24,37 @@
   <main>
     <!-- ================= כתוביות ================= -->
     <section id="page-subs" class="page">
-      <div id="subs-empty" class="dropzone" tabindex="0" role="button">
+      <div id="subs-empty" class="dropzone">
         <div class="drop-icon">💬</div>
-        <h2>גרור לכאן קובץ כתוביות</h2>
-        <p>או לחץ כדי לבחור · SRT / VTT · גם עברית בקידוד ישן (Windows-1255)</p>
+        <h2>גרור לכאן קבצי כתוביות – אחד או כמה</h2>
+        <p>SRT / VTT · גם עברית בקידוד ישן (Windows-1255)</p>
+        <div class="drop-actions">
+          <button id="subs-pick-files" class="btn filled">📄 בחירת קבצים (אחד או כמה)</button>
+          <button id="subs-pick-folder" class="btn tonal">📁 תיקייה שלמה (עונה)</button>
+        </div>
         <p class="muted small">התוכנה מאריכה את זמן ההצגה של כל כתובית, כך שלא "יחלפו" מהר – בלי חפיפות</p>
       </div>
 
       <div id="subs-editor" class="grid" hidden>
         <div class="col">
           <div class="card file-card">
-            <div>
+            <div class="file-main">
               <div id="subs-name" class="file-name"></div>
               <div id="subs-meta" class="muted small"></div>
             </div>
-            <button id="subs-change" class="btn text">החלף קובץ</button>
+            <button id="subs-change" class="btn text">החלף</button>
+          </div>
+          <div id="subs-files" class="card files-card" hidden>
+            <div class="files-head">
+              <button id="file-prev" class="icon-btn" title="הקובץ הקודם">→</button>
+              <select id="file-select" aria-label="קובץ"></select>
+              <button id="file-next" class="icon-btn" title="הקובץ הבא">←</button>
+            </div>
+            <p class="muted small">ההגדרות חלות על כל הקבצים</p>
+          </div>
+          <div class="save-row">
+            <button id="subs-save" class="btn filled big">💾 שמירת הכתוביות</button>
+            <button id="subs-save-all" class="btn tonal big" hidden>💾 שמירת כל הקבצים</button>
           </div>
 
           <div class="card">
@@ -75,8 +91,6 @@
           </div>
 
           <div class="card stats" id="subs-stats"></div>
-
-          <button id="subs-save" class="btn filled big wide">💾 שמירת הכתוביות</button>
         </div>
 
         <div class="col">

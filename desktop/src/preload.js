@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('studio', {
   pickFile: call('pickFile'),
   readSubs: call('readSubs'),
   saveSubs: call('saveSubs'),
+  pickSubsMany: call('pickSubsMany'),
+  saveSubsBatch: call('saveSubsBatch'),
   previewVideo: call('previewVideo'),
   probe: call('probe'),
   dubAnalyze: call('dubAnalyze'),

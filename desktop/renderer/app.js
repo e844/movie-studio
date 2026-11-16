@@ -51,7 +51,7 @@ const OPTS = [
   ['gap', 'gapMs', 1000, (v) => `${v.toFixed(2)} שנ׳`],
   ['shift', 'shiftMs', 1000, (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} שנ׳`],
 ];
-const subs = { file: null, format: 'srt', original: [], result: [], stats: null, compare: 'new' };
+const subs = { files: [], cur: 0, file: null, format: 'srt', original: [], result: [], stats: null, compare: 'new' };
 
 function readOptions() {
   const o = {};
@@ -89,22 +89,59 @@ function recompute() {
 document.querySelectorAll('#subs-editor input').forEach((i) => i.addEventListener('input', recompute));
 $('o-reset').onclick = () => { setOptions(S.DEFAULTS); recompute(); };
 
-async function openSubs(file) {
-  if (!file) return;
-  const r = await api.readSubs(file);
-  if (!r || r.error) { snack(errText(r && r.error)); return; }
-  const p = S.parse(r.text);
-  if (!p.cues.length) { snack(ERR['no-cues']); return; }
-  subs.file = r;
-  subs.format = p.format;
-  subs.original = p.cues;
-  $('subs-name').textContent = r.name;
-  $('subs-meta').textContent = `${p.cues.length} כתוביות · ${p.format.toUpperCase()} · קידוד ${r.encoding} · אורך ${fmtClock(p.cues[p.cues.length - 1].end)}`;
+/** טעינת קובץ אחד או כמה (עונה שלמה) */
+async function openSubsMany(paths) {
+  if (!paths || !paths.length) return;
+  // סדר טבעי: פרק 2 לפני פרק 10
+  const nameOf = (p) => p.split(/[\\/]/).pop();
+  paths = [...paths].sort((a, b) => nameOf(a).localeCompare(nameOf(b), undefined, { numeric: true, sensitivity: 'base' }));
+  const files = [];
+  const bad = [];
+  for (const f of paths) {
+    const r = await api.readSubs(f);
+    const p = r && !r.error ? S.parse(r.text) : null;
+    if (!p || !p.cues.length) { bad.push(f.split(/[\\/]/).pop()); continue; }
+    files.push({ info: r, format: p.format, original: p.cues });
+  }
+  if (!files.length) { snack(paths.length > 1 ? 'לא נמצאו קבצי כתוביות תקינים.' : ERR['no-cues']); return; }
+  subs.files = files;
+  const sel = $('file-select');
+  sel.textContent = '';
+  files.forEach((f, i) => {
+    const o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = `${i + 1}. ${f.info.name} (${f.original.length})`;
+    sel.appendChild(o);
+  });
+  $('subs-files').hidden = files.length < 2;
+  $('subs-save-all').hidden = files.length < 2;
+  $('subs-save-all').textContent = `💾 שמירת כל ${files.length} הקבצים`;
   $('subs-empty').hidden = true;
   $('subs-editor').hidden = false;
+  selectFile(0);
+  if (bad.length) snack(`${bad.length} קבצים דולגו (לא קבצי כתוביות תקינים): ${bad.slice(0, 3).join(', ')}${bad.length > 3 ? '…' : ''}`);
+}
+
+function selectFile(i) {
+  const f = subs.files[i];
+  if (!f) return;
+  pause();
+  subs.cur = i;
+  subs.file = f.info;
+  subs.format = f.format;
+  subs.original = f.original;
+  $('file-select').value = String(i);
+  $('file-prev').disabled = i === 0;
+  $('file-next').disabled = i === subs.files.length - 1;
+  $('subs-name').textContent = f.info.name;
+  const part = subs.files.length > 1 ? `קובץ ${i + 1} מתוך ${subs.files.length} · ` : '';
+  $('subs-meta').textContent = `${part}${f.original.length} כתוביות · ${f.format.toUpperCase()} · קידוד ${f.info.encoding} · אורך ${fmtClock(f.original[f.original.length - 1].end)}`;
   clock.t = 0;
   recompute();
 }
+$('file-select').onchange = () => selectFile(Number($('file-select').value));
+$('file-prev').onclick = () => selectFile(subs.cur - 1);
+$('file-next').onclick = () => selectFile(subs.cur + 1);
 
 const fmtClock = (ms) => S.fmtTime(ms, ',').replace(/,\d+$/, '');
 const fmtSec = (ms) => `${(ms / 1000).toFixed(1)}`;
@@ -257,11 +294,22 @@ $('subs-save').onclick = async () => {
   snack(`✓ נשמר: ${r.name}`, 'הצג בתיקייה', () => api.showInFolder(r.path));
 };
 
+// כל הקבצים: אותן הגדרות לכולם, שמירה לתיקייה אחת
+$('subs-save-all').onclick = async () => {
+  if (subs.files.length < 2) return;
+  const o = readOptions();
+  const items = subs.files.map((f) => ({ name: S.suggestName(f.info.name, f.format), text: S.format(S.retime(f.original, o).cues, f.format) }));
+  const src = subs.files[0].info.path;
+  const r = await api.saveSubsBatch({ items, sourceDir: src.slice(0, Math.max(src.lastIndexOf('/'), src.lastIndexOf('\\'))) });
+  if (!r || r.canceled) return;
+  if (r.error) { snack(errText(r.error)); return; }
+  snack(`✓ נשמרו ${r.count} קבצים`, 'הצג בתיקייה', () => api.showInFolder(r.first));
+};
+
 // ---------- פתיחה / גרירה ----------
-const pickSubs = async () => openSubs(await api.pickFile('subs'));
-$('subs-empty').onclick = pickSubs;
-$('subs-change').onclick = pickSubs;
-$('subs-empty').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') pickSubs(); });
+$('subs-pick-files').onclick = async () => openSubsMany(await api.pickSubsMany(false));
+$('subs-pick-folder').onclick = async () => openSubsMany(await api.pickSubsMany(true));
+$('subs-change').onclick = async () => openSubsMany(await api.pickSubsMany(false));
 
 // =====================================================================
 // דיבוב
@@ -395,8 +443,9 @@ document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) $('subs-em
 document.addEventListener('drop', (e) => {
   e.preventDefault();
   $('subs-empty').classList.remove('over');
-  const f = e.dataTransfer.files[0];
-  if (f && activeTab === 'subs') openSubs(api.pathForFile(f));
+  const list = [...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter((p) => /\.(srt|vtt)$/i.test(p))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (activeTab === 'subs') { if (list.length) openSubsMany(list); else snack('גרור קבצי SRT או VTT.'); }
 });
 
 api.version().then((v) => { $('version').textContent = `גרסה ${v}`; });

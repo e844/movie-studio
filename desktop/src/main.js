@@ -96,6 +96,50 @@ handle('pickFile', async (kind) => {
 });
 
 // ---------- כתוביות ----------
+const SUB_EXT = /\.(srt|vtt)$/i;
+const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+/** בחירת כמה קבצי כתוביות, או תיקייה שלמה (עונה) */
+handle('pickSubsMany', async (folder) => {
+  if (process.env.MS_TEST_SUBS) return process.env.MS_TEST_SUBS.split(path.delimiter);
+  const prefs = loadPrefs();
+  const r = await dialog.showOpenDialog(win, {
+    title: folder ? 'בחר תיקייה עם כתוביות (עונה שלמה)' : 'בחר קבצי כתוביות (אפשר כמה)',
+    defaultPath: prefs.dir_subs || app.getPath('videos'),
+    properties: folder ? ['openDirectory'] : ['openFile', 'multiSelections'],
+    filters: folder ? [] : [...FILTERS.subs, { name: 'כל הקבצים', extensions: ['*'] }],
+  });
+  if (r.canceled || !r.filePaths.length) return null;
+  let files = r.filePaths;
+  if (folder) files = fs.readdirSync(files[0]).filter((f) => SUB_EXT.test(f)).sort(natural).map((f) => path.join(r.filePaths[0], f));
+  savePrefs({ ...prefs, dir_subs: folder ? r.filePaths[0] : path.dirname(files[0] || '') });
+  return files.sort((a, b) => natural(path.basename(a), path.basename(b)));
+});
+
+/** שמירת כל הקבצים לתיקייה אחת שבוחרים */
+handle('saveSubsBatch', async ({ items, sourceDir }) => {
+  const prefs = loadPrefs();
+  let dir = process.env.MS_TEST_SAVE_DIR || null;
+  if (!dir) {
+    const r = await dialog.showOpenDialog(win, {
+      title: `איפה לשמור את ${items.length} קבצי הכתוביות?`,
+      defaultPath: prefs.dir_save_subs || sourceDir || app.getPath('videos'),
+      properties: ['openDirectory', 'createDirectory'],
+      buttonLabel: 'שמור כאן',
+    });
+    if (r.canceled || !r.filePaths[0]) return { canceled: true };
+    dir = r.filePaths[0];
+    savePrefs({ ...prefs, dir_save_subs: dir });
+  }
+  let first = null;
+  for (const it of items) {
+    const out = path.join(dir, path.basename(String(it.name)));
+    fs.writeFileSync(out, `\uFEFF${String(it.text).replace(/^\uFEFF/, '')}`, 'utf8');
+    created.add(out);
+    if (!first) first = out;
+  }
+  return { ok: true, count: items.length, dir, first };
+});
 handle('readSubs', (file) => {
   const st = fs.statSync(file);
   if (st.size > 20 * 1024 * 1024) return { error: 'too-big' };
