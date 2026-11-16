@@ -1,0 +1,66 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows EXE
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: ffmpeg (LGPL build, includes the LAME MP3 encoder)
+        run: |
+          curl -sSL -o ff.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip
+          unzip -q ff.zip -d ff
+          mkdir -p bin
+          cp ff/*/bin/ffmpeg.exe bin/
+          cp ff/*/LICENSE.txt bin/FFMPEG-LICENSE.txt
+          rm -rf ff ff.zip
+          ./bin/ffmpeg.exe -hide_banner -encoders | grep -E "libmp3lame|aac"
+      - name: Unit tests (subtitles + real dubbing sync with ffmpeg)
+        run: SC_FFMPEG="$PWD/bin/ffmpeg.exe" npm test
+      - name: Package
+        run: >
+          npx @electron/packager . MovieStudio --platform=win32 --arch=x64
+          --icon=build/icon.ico --asar --out=out --overwrite
+          --app-copyright="king400" --win32metadata.ProductName="Movie Studio by king400"
+          --win32metadata.CompanyName="king400" --win32metadata.FileDescription="Movie Studio by king400"
+          --ignore="^/test" --ignore="^/out" --ignore="^/bin" --extra-resource=bin
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path out/MovieStudio-win32-x64 -DestinationPath "$env:GITHUB_WORKSPACE/MovieStudio-Windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: MovieStudio-Windows.zip
+
+  release:
+    name: Publish downloads
+    needs: [windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" dist/* --repo "${{ github.repository }}" \
+            --title "סטודיו כתוביות ודיבוב – בנייה ${{ github.run_number }}" --notes "נוצר ע״י king400 · Windows (EXE) · כתוביות + דיבוב · תומך 4K" --latest

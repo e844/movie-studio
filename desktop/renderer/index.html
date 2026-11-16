@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' media: blob:; img-src 'self' data:; style-src 'self'; script-src 'self'">
+  <title>סטודיו כתוביות ודיבוב</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">🎬</div>
+      <div>
+        <h1>סטודיו כתוביות ודיבוב</h1>
+        <p class="credit">נוצר ע״י <b>king400</b></p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button id="tab-subs" class="tab active" role="tab" aria-selected="true" data-tab="subs">💬 כתוביות</button>
+      <button id="tab-dub" class="tab" role="tab" aria-selected="false" data-tab="dub">🎙️ דיבוב</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ================= כתוביות ================= -->
+    <section id="page-subs" class="page">
+      <div id="subs-empty" class="dropzone" tabindex="0" role="button">
+        <div class="drop-icon">💬</div>
+        <h2>גרור לכאן קובץ כתוביות</h2>
+        <p>או לחץ כדי לבחור · SRT / VTT · גם עברית בקידוד ישן (Windows-1255)</p>
+        <p class="muted small">התוכנה מאריכה את זמן ההצגה של כל כתובית, כך שלא "יחלפו" מהר – בלי חפיפות</p>
+      </div>
+
+      <div id="subs-editor" class="grid" hidden>
+        <div class="col">
+          <div class="card file-card">
+            <div>
+              <div id="subs-name" class="file-name"></div>
+              <div id="subs-meta" class="muted small"></div>
+            </div>
+            <button id="subs-change" class="btn text">החלף קובץ</button>
+          </div>
+
+          <div class="card">
+            <h3>זמן על המסך</h3>
+            <div class="setting">
+              <label for="o-extend">הארכה לכל כתובית</label>
+              <input id="o-extend" type="range" min="0" max="3" step="0.1" dir="ltr"><output id="v-extend"></output>
+            </div>
+            <div class="setting">
+              <label for="o-min">משך מינימלי (שורות קצרות)</label>
+              <input id="o-min" type="range" min="0.5" max="4" step="0.1" dir="ltr"><output id="v-min"></output>
+            </div>
+            <div class="setting">
+              <label for="o-cps">לפי אורך השורה (תווים לשנייה)</label>
+              <input id="o-cps" type="range" min="0" max="25" step="1" dir="ltr"><output id="v-cps"></output>
+            </div>
+            <div class="setting">
+              <label for="o-max">משך מקסימלי</label>
+              <input id="o-max" type="range" min="3" max="12" step="0.5" dir="ltr"><output id="v-max"></output>
+            </div>
+            <div class="setting">
+              <label for="o-gap">רווח בין כתוביות (בלי חפיפות)</label>
+              <input id="o-gap" type="range" min="0" max="0.5" step="0.02" dir="ltr"><output id="v-gap"></output>
+            </div>
+            <div class="setting">
+              <label for="o-shift">הזזת כל הכתוביות (סנכרון)</label>
+              <input id="o-shift" type="range" min="-30" max="30" step="0.1" dir="ltr"><output id="v-shift"></output>
+            </div>
+            <h3>טקסט</h3>
+            <label class="check"><input id="o-tight" type="checkbox"> פיסוק צמוד למילה <span class="muted small">("שלום , מה ?" ← "שלום, מה?")</span></label>
+            <label class="check"><input id="o-title" type="checkbox"> אות גדולה בתחילת כל מילה <span class="muted small">(לכתוביות באנגלית)</span></label>
+            <label class="check"><input id="o-merge" type="checkbox"> מיזוג כתוביות שמתחילות כמעט יחד</label>
+            <div class="row-end"><button id="o-reset" class="btn text small">↺ ברירת מחדל</button></div>
+          </div>
+
+          <div class="card stats" id="subs-stats"></div>
+
+          <button id="subs-save" class="btn filled big wide">💾 שמירת הכתוביות</button>
+        </div>
+
+        <div class="col">
+          <div class="card player-card">
+            <div class="screen" id="screen">
+              <video id="video" muted playsinline></video>
+              <div id="sub-line" class="sub-line"></div>
+              <div id="screen-hint" class="screen-hint">תצוגה מקדימה · אפשר לטעון את הסרט כדי לראות את הכתוביות עליו</div>
+            </div>
+            <input id="seek" type="range" min="0" max="1000" value="0" dir="ltr" aria-label="מיקום">
+            <div class="player-row">
+              <button id="p-restart" class="icon-btn" title="מההתחלה (מקש 0)">⏮</button>
+              <button id="p-play" class="fab" title="הפעלה / השהיה (רווח)">▶</button>
+              <span id="p-time" class="time" dir="ltr">00:00:00</span>
+              <div class="spacer"></div>
+              <div class="seg" role="group" aria-label="השוואה">
+                <button id="cmp-new" class="seg-btn on">אחרי</button>
+                <button id="cmp-old" class="seg-btn">לפני</button>
+              </div>
+              <button id="p-video" class="btn tonal small">🎞️ טען סרט לתצוגה</button>
+            </div>
+            <p class="muted small keys">מקשים: <b>0</b> = חזרה להתחלה · רווח = הפעלה/השהיה · ← → = 5 שניות</p>
+          </div>
+
+          <div class="card list-card">
+            <div class="list-head"><span>#</span><span>זמן</span><span>משך</span><span>טקסט</span></div>
+            <div id="cue-list" class="cue-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= דיבוב ================= -->
+    <section id="page-dub" class="page" hidden>
+      <div class="dub-intro card">
+        <b>להלביש דיבוב עברי על סרט באנגלית.</b>
+        התוכנה משווה את המוזיקה והאפקטים המשותפים לשתי הגרסאות, מוצאת את ההיסט המדויק (וגם הבדל מהירות – למשל DVD של 25 פריימים לשנייה),
+        ויוצרת קובץ MKV: הווידאו מהגרסה האנגלית <b>כמו שהוא</b> (גם 4K / HDR, בלי איבוד איכות) + ערוץ עברי מסונכרן + האנגלית המקורית כערוץ נוסף.
+      </div>
+      <div class="dub-files">
+        <div class="card file-slot" id="slot-english">
+          <div class="slot-title">1 · הסרט באנגלית <span class="muted small">(ממנו נלקח הווידאו)</span></div>
+          <div class="slot-body" id="eng-body"><p class="muted">לא נבחר קובץ</p></div>
+          <button id="pick-english" class="btn tonal">📂 בחירת הסרט באנגלית</button>
+        </div>
+        <div class="card file-slot" id="slot-dubbed">
+          <div class="slot-title">2 · הסרט המדובב <span class="muted small">(ממנו נלקח הקול העברי)</span></div>
+          <div class="slot-body" id="heb-body"><p class="muted">לא נבחר קובץ</p></div>
+          <button id="pick-dubbed" class="btn tonal">📂 בחירת הסרט המדובב</button>
+        </div>
+      </div>
+      <div class="center"><button id="dub-analyze" class="btn filled big" disabled>🔍 ניתוח וסנכרון</button></div>
+
+      <div id="dub-result" class="card" hidden>
+        <h3 id="dub-title"></h3>
+        <div class="result-grid">
+          <div><span class="muted">היסט</span><b id="r-offset" dir="ltr"></b></div>
+          <div><span class="muted">מהירות</span><b id="r-speed"></b></div>
+          <div><span class="muted">מסונכרן</span><b id="r-sync"></b></div>
+        </div>
+        <div class="timeline" id="r-timeline" dir="ltr"></div>
+        <div class="legend"><span class="lg ok"></span> מסונכרן <span class="lg off"></span> לא תואם (סצנה שונה) <span class="lg na"></span> שקט / לא ניתן לבדוק</div>
+        <div id="r-segments" class="muted small"></div>
+        <label class="check"><input id="keep-eng" type="checkbox" checked> לשמור גם את האנגלית המקורית כערוץ נוסף</label>
+        <label class="check"><input id="keep-subs" type="checkbox" checked> לשמור את הכתוביות שבסרט האנגלי</label>
+        <button id="dub-export" class="btn filled big wide">🎬 יצירת הסרט עם הדיבוב</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">נוצר ע״י <b>king400</b> · <span id="version"></span></footer>
+
+  <dialog id="progress-dialog">
+    <h2 id="progress-title">עובד…</h2>
+    <p id="progress-stage" class="muted"></p>
+    <div class="bar"><div id="progress-fill"></div></div>
+    <p id="progress-text" class="muted">0%</p>
+    <div class="dlg-actions"><button id="progress-cancel" class="btn text">ביטול</button></div>
+  </dialog>
+  <div id="snackbar" class="snackbar" hidden><span id="snack-text"></span><button id="snack-action" class="btn text" hidden></button></div>
+
+  <script src="../src/subs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

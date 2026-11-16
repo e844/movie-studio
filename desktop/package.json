@@ -1,0 +1,20 @@
+{
+  "name": "movie-studio",
+  "productName": "MovieStudio",
+  "version": "1.0.0",
+  "description": "סטודיו כתוביות ודיבוב – נוצר ע״י king400",
+  "main": "src/main.js",
+  "author": "king400",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test --test-force-exit --test-timeout=300000 test/subs.test.js test/align.test.js",
+    "test:e2e": "node test/e2e.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.3.2",
+    "playwright-core": "^1.65.1"
+  }
+}
