@@ -90,7 +90,7 @@ await step('save → UTF-8 SRT, no overlaps, short lines longer', async () => {
   await win.fill('#o-min', '1.5');
   await win.click('#subs-save');
   await win.waitForSelector('#snackbar:not([hidden])');
-  const f = path.join(saveDir, 'Movie.heb.מתוזמן.srt');
+  const f = path.join(saveDir, 'Movie.heb.מתוזמן.srt'); // כמה קבצים טעונים – לא לוקחים את שם הסרט
   const raw = fs.readFileSync(f);
   assert.deepEqual([...raw.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
   const cues = S.parse(raw.toString('utf8')).cues;
@@ -100,6 +100,12 @@ await step('save → UTF-8 SRT, no overlaps, short lines longer', async () => {
   assert.ok(cues[0].end - cues[0].start > 500);
   assert.ok(cues[4].end - cues[4].start >= 1500);
   await shot('4-subs-saved');
+});
+
+await step('file name with dots instead of spaces', async () => {
+  await win.check('#o-dots');
+  assert.equal(await win.textContent('#name-preview'), '← Movie.heb.srt');
+  await win.uncheck('#o-dots');
 });
 
 await step('several files: switch between them, save all to one folder', async () => {

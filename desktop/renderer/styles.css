@@ -166,6 +166,7 @@ select { background: var(--surface-2); color: var(--on); border: 1px solid var(-
 .files-card p { margin: 6px 2px 0; }
 .files-head { display: flex; gap: 8px; align-items: center; }
 .files-head select { flex: 1; min-width: 0; }
+.name-preview { margin: 2px 0 0; word-break: break-all; text-align: right; }
 .save-row { display: flex; gap: 10px; }
 .save-row .btn { flex: 1; justify-content: center; padding-inline: 12px; }
 .footer { text-align: center; color: var(--muted); font-size: 12.5px; padding: 6px 0 10px; }

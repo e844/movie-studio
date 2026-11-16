@@ -74,8 +74,17 @@ function showOptionValues() {
 const saved = (() => { try { return JSON.parse(localStorage.getItem('subsOptions')) || null; } catch { return null; } })();
 setOptions({ ...S.DEFAULTS, ...(saved || {}) });
 
+const nameOpts = (single) => ({ dots: $('o-dots').checked, videoName: single ? clock.videoName : null });
+function showNamePreview() {
+  if (!subs.file) return;
+  $('name-preview').textContent = `← ${S.suggestName(subs.file.name, subs.format, nameOpts(true))}`;
+}
+try { $('o-dots').checked = localStorage.getItem('dots') === '1'; } catch { /* ignore */ }
+$('o-dots').addEventListener('change', () => { try { localStorage.setItem('dots', $('o-dots').checked ? '1' : '0'); } catch { /* ignore */ } showNamePreview(); });
+
 function recompute() {
   showOptionValues();
+  showNamePreview();
   const o = readOptions();
   try { localStorage.setItem('subsOptions', JSON.stringify(o)); } catch { /* ignore */ }
   if (!subs.original.length) return;
@@ -202,7 +211,7 @@ $('cmp-old').onclick = () => { subs.compare = 'old'; $('cmp-old').classList.add(
 
 // ---------- נגן תצוגה מקדימה (עם סרט או בלי) ----------
 const video = $('video');
-const clock = { t: 0, playing: false, last: 0, hasVideo: false };
+const clock = { t: 0, playing: false, last: 0, hasVideo: false, videoName: null };
 const totalMs = () => Math.max(
   subs.result.length ? subs.result[subs.result.length - 1].end : 0,
   subs.original.length ? subs.original[subs.original.length - 1].end : 0,
@@ -265,6 +274,8 @@ $('p-video').onclick = async () => {
   if (!r || r.error) { snack(errText(r && r.error)); return; }
   video.src = r.url;
   clock.hasVideo = true;
+  clock.videoName = subs.files.length > 1 ? null : r.name; // שם הסרט לקובץ הכתוביות (רק כשיש קובץ אחד)
+  showNamePreview();
   $('screen-hint').hidden = true;
   video.onerror = () => {
     clock.hasVideo = false;
@@ -288,7 +299,7 @@ document.addEventListener('keydown', (e) => {
 $('subs-save').onclick = async () => {
   if (!subs.result.length) return;
   const text = S.format(subs.result, subs.format);
-  const r = await api.saveSubs({ text, suggested: S.suggestName(subs.file.name, subs.format), fmt: subs.format, sourcePath: subs.file.path });
+  const r = await api.saveSubs({ text, suggested: S.suggestName(subs.file.name, subs.format, nameOpts(true)), fmt: subs.format, sourcePath: subs.file.path });
   if (!r || r.canceled) return;
   if (r.error) { snack(errText(r.error)); return; }
   snack(`✓ נשמר: ${r.name}`, 'הצג בתיקייה', () => api.showInFolder(r.path));
@@ -298,7 +309,7 @@ $('subs-save').onclick = async () => {
 $('subs-save-all').onclick = async () => {
   if (subs.files.length < 2) return;
   const o = readOptions();
-  const items = subs.files.map((f) => ({ name: S.suggestName(f.info.name, f.format), text: S.format(S.retime(f.original, o).cues, f.format) }));
+  const items = subs.files.map((f) => ({ name: S.suggestName(f.info.name, f.format, nameOpts(false)), text: S.format(S.retime(f.original, o).cues, f.format) }));
   const src = subs.files[0].info.path;
   const r = await api.saveSubsBatch({ items, sourceDir: src.slice(0, Math.max(src.lastIndexOf('/'), src.lastIndexOf('\\'))) });
   if (!r || r.canceled) return;

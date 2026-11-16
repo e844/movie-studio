@@ -179,10 +179,22 @@ function cueAt(cues, t) {
   return c && t < c.end ? { index: hi, cue: c } : null;
 }
 
-function suggestName(name, fmt) {
-  const base = String(name || 'כתוביות').replace(/\.[^.]+$/, '');
-  return `${base}.מתוזמן.${fmt === 'vtt' ? 'vtt' : 'srt'}`;
+/** "Aladdin 2019 UHD TrueHD 7 1-HDH" → "Aladdin.2019.UHD.TrueHD.7.1-HDH" (נקודות במקום רווחים) */
+function dotted(name) {
+  return String(name).trim().replace(/[\s_]+/g, '.').replace(/\.{2,}/g, '.').replace(/\.?-\.?/g, '-').replace(/^\.|\.$/g, '');
 }
 
-const subsApi = { DEFAULTS, decodeText, parse, format, fmtTime, plain, tightPunctuation, titleCase, retime, cueAt, suggestName };
+/**
+ * שם לשמירה. opts.dots – נקודות במקום רווחים ובלי תוספת ".מתוזמן";
+ * opts.videoName – שם הסרט (כדי שהנגן יטען את הכתוביות לבד).
+ */
+function suggestName(name, fmt, opts = {}) {
+  const ext = fmt === 'vtt' ? 'vtt' : 'srt';
+  const fromVideo = opts.videoName ? String(opts.videoName).replace(/\.[^.]+$/, '') : null;
+  const base = fromVideo || String(name || 'כתוביות').replace(/\.[^.]+$/, '');
+  if (opts.dots) return `${dotted(base)}.${ext}`;
+  return fromVideo ? `${base}.${ext}` : `${base}.מתוזמן.${ext}`;
+}
+
+const subsApi = { DEFAULTS, decodeText, parse, format, fmtTime, plain, tightPunctuation, titleCase, retime, cueAt, suggestName, dotted };
 if (typeof module !== 'undefined' && module.exports) module.exports = subsApi; else globalThis.Subs = subsApi;

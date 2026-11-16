@@ -91,3 +91,11 @@ test('cue at time (preview) and file name', () => {
   assert.equal(S.cueAt(cues, 2999).cue.text, 'b');
   assert.equal(S.suggestName('Movie.2020.heb.srt', 'srt'), 'Movie.2020.heb.מתוזמן.srt');
 });
+
+test('file name with dots instead of spaces', () => {
+  assert.equal(S.dotted('Aladdin 2019 UHD BluRay 2160p x265 HDR 10bit Atmos TrueHD 7 1-HDH'), 'Aladdin.2019.UHD.BluRay.2160p.x265.HDR.10bit.Atmos.TrueHD.7.1-HDH');
+  assert.equal(S.dotted('  a  b_c - d '), 'a.b.c-d');
+  assert.equal(S.suggestName('Aladdin 2019 heb.srt', 'srt', { dots: true }), 'Aladdin.2019.heb.srt');
+  assert.equal(S.suggestName('x.srt', 'srt', { videoName: 'Aladdin 2019 2160p.mkv', dots: true }), 'Aladdin.2019.2160p.srt');
+  assert.equal(S.suggestName('x.srt', 'srt', { videoName: 'Movie.mkv' }), 'Movie.srt');
+});
